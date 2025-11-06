@@ -1,29 +1,100 @@
 # Quick Start Guide
 
+**Get up and running in 5 minutes!**
+
+---
+
+## Prerequisites
+
+- ✅ Python 3.10+ installed
+- ✅ FFmpeg installed
+- ✅ Project downloaded/cloned
+
+**Don't have these?** See [INSTALL.md](INSTALL.md) for detailed setup.
+
+---
+
 ## 5-Minute Setup
 
-### 1. Install Dependencies
+### Step 1: Navigate to Project
 
 ```bash
-cd /app/video_producer
+cd video_producer
+```
+
+### Step 2: Install Dependencies
+
+```bash
+# Install all required packages
 pip install -r requirements.txt
 ```
 
-### 2. Run Demo
+**Wait ~2-3 minutes for installation...**
+
+### Step 3: Verify with Demo
 
 ```bash
 python scripts/demo.py
 ```
 
-This creates sample stylized images in `/app/outputs/demo/`
+**Expected:** Creates 4 stylized images in `/app/outputs/demo/`
 
-### 3. Launch Streamlit UI
+✅ **Success!** Installation verified.
+
+### Step 4: Start the UI
 
 ```bash
 streamlit run app/streamlit_app.py
 ```
 
-Open: http://localhost:8501
+**Then open browser:** http://localhost:8501
+
+🎉 **You're ready!**
+
+---
+
+## First Video Processing
+
+### Using the UI (Easiest)
+
+1. **Open Dashboard** (should be default page)
+
+2. **Enter video path:**
+   ```
+   Input Type: Single File
+   Video Path: /path/to/your/video.mp4
+   ```
+
+3. **Select styles:**
+   - ☑️ Pencil Sketch
+   - ☑️ Cartoon
+   - ☐ Comic/Halftone
+   - ☐ Cinematic
+   - ☐ Fast Neural Style
+
+4. **Choose quality:**
+   - Speed (fast, good quality)
+   - **Balanced** ← Recommended
+   - Quality (slow, best quality)
+
+5. **Set output:**
+   ```
+   Output Directory: /path/to/output/
+   ```
+
+6. **Click "🎬 Process Full"**
+
+7. **Monitor progress** in "Batch Queue" page
+
+### Using CLI (Advanced)
+
+```bash
+python -m scripts.cli render \
+  --in /path/to/video.mp4 \
+  --styles pencil,cartoon \
+  --preset Balanced \
+  --out /path/to/output/
+```
 
 ## Using the UI
 
