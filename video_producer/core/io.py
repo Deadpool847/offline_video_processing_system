@@ -78,7 +78,7 @@ class VideoProbe:
 
 
 class VideoReader:
-    """Stream-based video reader using PyAV."""
+    """Stream-based video reader using PyAV or FFmpeg."""
     
     def __init__(self, video_path: str, start_frame: int = 0):
         self.video_path = video_path
@@ -86,34 +86,81 @@ class VideoReader:
         self.container = None
         self.stream = None
         self.metadata = VideoProbe.probe(video_path)
+        self.use_pyav = PYAV_AVAILABLE
+        self.process = None
         
     def __enter__(self):
-        self.container = av.open(self.video_path)
-        self.stream = self.container.streams.video[0]
-        
-        # Seek to start frame if needed
-        if self.start_frame > 0:
-            timestamp = int(self.start_frame / self.metadata['fps'] * av.time_base)
-            self.container.seek(timestamp)
+        if self.use_pyav and av:
+            self.container = av.open(self.video_path)
+            self.stream = self.container.streams.video[0]
+            
+            # Seek to start frame if needed
+            if self.start_frame > 0:
+                timestamp = int(self.start_frame / self.metadata['fps'] * av.time_base)
+                self.container.seek(timestamp)
+        else:
+            # Fallback to FFmpeg pipe
+            self._init_ffmpeg_reader()
         
         return self
+    
+    def _init_ffmpeg_reader(self):
+        """Initialize FFmpeg-based reader."""
+        cmd = ['ffmpeg', '-i', self.video_path]
+        
+        if self.start_frame > 0:
+            start_time = self.start_frame / self.metadata['fps']
+            cmd.extend(['-ss', str(start_time)])
+        
+        cmd.extend([
+            '-f', 'rawvideo',
+            '-pix_fmt', 'rgb24',
+            '-'
+        ])
+        
+        self.process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.container:
             self.container.close()
+        if self.process:
+            self.process.terminate()
+            self.process.wait()
     
     def read_frames(self, max_frames: Optional[int] = None) -> Iterator[np.ndarray]:
         """Yield frames as numpy arrays (RGB)."""
-        frame_count = 0
-        
-        for frame in self.container.decode(video=0):
-            if max_frames and frame_count >= max_frames:
-                break
+        if self.use_pyav and self.container:
+            frame_count = 0
             
-            # Convert to RGB numpy array
-            img = frame.to_ndarray(format='rgb24')
-            yield img
-            frame_count += 1
+            for frame in self.container.decode(video=0):
+                if max_frames and frame_count >= max_frames:
+                    break
+                
+                # Convert to RGB numpy array
+                img = frame.to_ndarray(format='rgb24')
+                yield img
+                frame_count += 1
+        else:
+            # FFmpeg fallback
+            frame_count = 0
+            frame_size = self.metadata['width'] * self.metadata['height'] * 3
+            
+            while True:
+                if max_frames and frame_count >= max_frames:
+                    break
+                
+                raw_frame = self.process.stdout.read(frame_size)
+                if len(raw_frame) != frame_size:
+                    break
+                
+                frame = np.frombuffer(raw_frame, dtype=np.uint8)
+                frame = frame.reshape((self.metadata['height'], self.metadata['width'], 3))
+                yield frame
+                frame_count += 1
     
     def get_metadata(self) -> Dict:
         return self.metadata
