@@ -1,34 +1,221 @@
-# Installation Guide
+# Complete Installation Guide
 
 ## System Requirements
 
-### Minimum
-- Python 3.10+
-- 8 GB RAM
-- FFmpeg
+### Minimum (CPU-only mode)
+- **OS:** Windows 10/11, Ubuntu 20.04+, macOS 11+
+- **Python:** 3.10 or higher
+- **RAM:** 8 GB
+- **Storage:** 2 GB free space
+- **Software:** FFmpeg
 
-### Recommended (HP OMEN)
-- Python 3.10+
-- 16 GB RAM
-- NVIDIA GPU (RTX series recommended)
-- NVIDIA Driver 535+
-- FFmpeg with NVENC support
+### Recommended (HP OMEN / GPU mode)
+- **OS:** Windows 10/11, Ubuntu 20.04+
+- **Python:** 3.10 or higher
+- **RAM:** 16 GB
+- **GPU:** NVIDIA RTX series (3060+)
+- **Driver:** NVIDIA Driver 535+
+- **Storage:** 5 GB free space
+- **Software:** FFmpeg with NVENC support
 
-## Installation Steps
+---
 
-### 1. Install System Dependencies
+## Step-by-Step Installation
 
-**Ubuntu/Debian:**
-```bash
-sudo apt update
-sudo apt install -y python3.10 python3-pip ffmpeg pkg-config
+### Step 1: Install Python 3.10+
+
+#### Windows
+
+**Option A: Official Installer (Recommended)**
+1. Download from [python.org/downloads](https://www.python.org/downloads/)
+2. Run installer
+3. ✅ **Important:** Check "Add Python to PATH"
+4. Click "Install Now"
+
+**Option B: Microsoft Store**
+```powershell
+# Search "Python 3.10" in Microsoft Store
+# Click Install
 ```
 
-**Windows:**
+**Verify:**
 ```powershell
-# Install Python 3.10+ from python.org
-# Install FFmpeg
+python --version
+# Should show: Python 3.10.x or higher
+```
+
+#### Linux (Ubuntu/Debian)
+
+```bash
+# Update package list
+sudo apt update
+
+# Install Python 3.10
+sudo apt install -y python3.10 python3-pip python3-venv
+
+# Verify
+python3.10 --version
+```
+
+#### macOS
+
+**Option A: Homebrew (Recommended)**
+```bash
+# Install Homebrew (if not installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install Python
+brew install python@3.10
+
+# Verify
+python3 --version
+```
+
+**Option B: Official Installer**
+1. Download from [python.org/downloads/macos](https://www.python.org/downloads/macos/)
+2. Run .pkg installer
+3. Follow prompts
+
+---
+
+### Step 2: Install FFmpeg
+
+#### Windows
+
+**Option A: winget (Windows 10 1809+)**
+```powershell
 winget install FFmpeg
+```
+
+**Option B: Chocolatey**
+```powershell
+# Install Chocolatey first (if not installed)
+# Visit: chocolatey.org/install
+
+# Then install FFmpeg
+choco install ffmpeg
+```
+
+**Option C: Manual Installation**
+1. Download from [ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+2. Extract to `C:\ffmpeg`
+3. Add to PATH:
+   - Search "Environment Variables" in Start
+   - Edit "Path" under System Variables
+   - Add `C:\ffmpeg\bin`
+   - Click OK
+
+**Verify:**
+```powershell
+ffmpeg -version
+```
+
+#### Linux (Ubuntu/Debian)
+
+```bash
+sudo apt update
+sudo apt install -y ffmpeg
+
+# Verify
+ffmpeg -version
+```
+
+#### macOS
+
+```bash
+brew install ffmpeg
+
+# Verify
+ffmpeg -version
+```
+
+---
+
+### Step 3: Clone/Download Project
+
+**Option A: Git Clone**
+```bash
+git clone <repository-url>
+cd video_producer
+```
+
+**Option B: Download ZIP**
+1. Download project ZIP
+2. Extract to desired location
+3. Open terminal/command prompt
+4. Navigate to extracted folder:
+```bash
+cd path/to/video_producer
+```
+
+---
+
+### Step 4: Create Virtual Environment (Recommended)
+
+**Why?** Isolates dependencies, prevents conflicts
+
+#### Windows
+
+```powershell
+# Create virtual environment
+python -m venv venv
+
+# Activate
+.\venv\Scripts\activate
+
+# You should see (venv) in prompt
+```
+
+#### Linux/macOS
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+
+# Activate
+source venv/bin/activate
+
+# You should see (venv) in prompt
+```
+
+**To deactivate later:**
+```bash
+deactivate
+```
+
+---
+
+### Step 5: Install Python Dependencies
+
+```bash
+# Upgrade pip first
+pip install --upgrade pip
+
+# Install all dependencies
+pip install -r requirements.txt
+```
+
+**This installs:**
+- opencv-python (image processing)
+- numpy (array operations)
+- streamlit (web UI)
+- onnxruntime (ML inference)
+- PyYAML (config files)
+- pandas (data handling)
+- psutil (system monitoring)
+- pynvml (GPU monitoring)
+- scikit-image (image metrics)
+- Pillow (image I/O)
+- tqdm (progress bars)
+- plotly (visualizations)
+- pytest (testing)
+
+**If installation fails:**
+```bash
+# Try installing one by one
+pip install opencv-python numpy streamlit
+pip install onnxruntime PyYAML pandas
+pip install psutil pynvml scikit-image Pillow tqdm plotly pytest
 ```
 
 ### 2. Install Python Dependencies
