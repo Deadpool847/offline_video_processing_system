@@ -218,62 +218,311 @@ pip install onnxruntime PyYAML pandas
 pip install psutil pynvml scikit-image Pillow tqdm plotly pytest
 ```
 
-### 2. Install Python Dependencies
+---
+
+### Step 6: Verify Installation
+
+**Test Python imports:**
+```bash
+python -c "import cv2, numpy, streamlit, onnxruntime; print('✅ All core packages installed')"
+```
+
+**Test FFmpeg:**
+```bash
+ffmpeg -version
+# Should show version info
+```
+
+**Check NVENC (GPU encoding):**
+```bash
+ffmpeg -hide_banner -encoders | grep nvenc
+# Should show: h264_nvenc, hevc_nvenc (if NVIDIA GPU present)
+# If not shown: CPU-only mode will be used (still works fine)
+```
+
+---
+
+### Step 7: Run Demo (Verify Everything Works)
 
 ```bash
-cd /app/video_producer
+# Run demo script
+python scripts/demo.py
+```
 
-# Create virtual environment (recommended)
-python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
-# OR
-venv\Scripts\activate  # Windows
+**Expected output:**
+```
+======================================================================
+ML-Powered Video Producer - Stylizer Demo
+======================================================================
 
-# Install packages
-pip install --upgrade pip
+Hardware Status:
+  ✅ GPU: NVIDIA RTX 3070  (or ⚠️ GPU: Not detected)
+  NVENC: Available  (or Not available)
+
+Output directory: /app/outputs/demo
+
+Generating sample image...
+  ✅ Saved: original.png
+
+Processing styles...
+  Processing pencil... ✅ Saved: pencil.png
+  Processing cartoon... ✅ Saved: cartoon.png
+  Processing comic... ✅ Saved: comic.png
+  Processing cinematic... ✅ Saved: cinematic.png
+
+======================================================================
+Demo complete! Check outputs in: /app/outputs/demo
+======================================================================
+```
+
+**Check outputs:**
+```bash
+# Windows
+explorer /app/outputs/demo
+
+# Linux
+xdg-open /app/outputs/demo
+
+# macOS
+open /app/outputs/demo
+```
+
+You should see 4 stylized images!
+
+---
+
+### Step 8: Start the Application
+
+**Option A: Streamlit UI (Recommended)**
+```bash
+streamlit run app/streamlit_app.py
+```
+
+**Or use convenience script:**
+```bash
+# Linux/macOS
+./START.sh
+
+# Windows
+streamlit run app/streamlit_app.py
+```
+
+**Then open browser:** http://localhost:8501
+
+**Option B: CLI**
+```bash
+# View help
+python -m scripts.cli --help
+
+# Render video
+python -m scripts.cli render --in video.mp4 --styles pencil --out outputs/
+```
+
+---
+
+## GPU Setup (NVIDIA - HP OMEN)
+
+### Check Current Setup
+
+```bash
+# Check if NVIDIA driver installed
+nvidia-smi
+```
+
+**Good output:**
+```
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 535.xx       Driver Version: 535.xx       CUDA Version: 12.x   |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| ...
+```
+
+**If command not found:** Drivers not installed
+
+### Install NVIDIA Drivers
+
+#### Windows
+
+1. Visit [nvidia.com/Download/index.aspx](https://www.nvidia.com/Download/index.aspx)
+2. Select your GPU (e.g., RTX 3070)
+3. Download **Game Ready Driver** or **Studio Driver**
+4. Run installer
+5. Restart computer
+6. Verify: `nvidia-smi`
+
+#### Linux (Ubuntu)
+
+```bash
+# Add NVIDIA PPA
+sudo add-apt-repository ppa:graphics-drivers/ppa
+sudo apt update
+
+# Install driver (version 535 recommended)
+sudo apt install nvidia-driver-535
+
+# Reboot
+sudo reboot
+
+# After reboot, verify
+nvidia-smi
+```
+
+### Verify NVENC Support
+
+```bash
+ffmpeg -hide_banner -encoders | grep nvenc
+```
+
+**Should show:**
+```
+h264_nvenc          NVIDIA NVENC H.264 encoder
+hevc_nvenc          NVIDIA NVENC HEVC encoder
+```
+
+**If not shown but GPU detected:**
+- Update NVIDIA drivers to latest
+- Reinstall FFmpeg
+- Check GPU compatibility (GTX 10-series and newer support NVENC)
+
+---
+
+## Advanced: CUDA for PyTorch (Optional)
+
+**Only needed if you want to fine-tune ML models**
+
+### Check CUDA Version
+
+```bash
+nvidia-smi
+# Look for "CUDA Version: 12.x"
+```
+
+### Install PyTorch with CUDA
+
+**Visit:** [pytorch.org/get-started](https://pytorch.org/get-started/locally/)
+
+**Example (CUDA 12.1):**
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+```
+
+**Verify:**
+```python
+python -c "import torch; print('CUDA available:', torch.cuda.is_available())"
+# Should print: CUDA available: True
+```
+
+---
+
+## Troubleshooting Installation
+
+### Python Issues
+
+**"Python not found"**
+- **Windows:** Reinstall Python, check "Add to PATH"
+- **Linux:** Use `python3` instead of `python`
+- **macOS:** Use `python3` instead of `python`
+
+**"pip not found"**
+```bash
+# Windows
+python -m ensurepip --upgrade
+
+# Linux/macOS
+sudo apt install python3-pip  # Linux
+brew install python  # macOS
+```
+
+### FFmpeg Issues
+
+**"ffmpeg not found"**
+- **Windows:** Check PATH includes FFmpeg bin folder
+- **Linux:** `sudo apt install ffmpeg`
+- **macOS:** `brew install ffmpeg`
+
+**"NVENC not available"**
+- Update NVIDIA drivers
+- Check GPU supports NVENC (GTX 10-series+)
+- System will fallback to CPU encoding (still works)
+
+### Dependency Issues
+
+**"opencv not found"**
+```bash
+pip install opencv-python
+```
+
+**"ModuleNotFoundError: numpy"**
+```bash
+pip install numpy
+```
+
+**"Cannot install scikit-image"**
+```bash
+# Try without version constraints
+pip install --no-deps scikit-image
 pip install -r requirements.txt
 ```
 
-**Note:** If `av` (PyAV) fails to install:
-```bash
-# Ubuntu/Debian
-sudo apt install -y libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev libavresample-dev
+### Permission Issues
 
-# Then retry
-pip install av
+**Linux: "Permission denied"**
+```bash
+# Don't use sudo pip, use virtual environment instead
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### 3. Verify Installation
+**Windows: "Access denied"**
+- Run command prompt as Administrator
+- Or use virtual environment (recommended)
+
+---
+
+## Uninstallation
+
+### Remove Virtual Environment
 
 ```bash
-# Check FFmpeg
-ffmpeg -version
+# Deactivate if active
+deactivate
 
-# Check NVENC (GPU encoding)
-ffmpeg -hide_banner -encoders | grep nvenc
-# Should show: h264_nvenc, hevc_nvenc
-
-# Check Python packages
-python -c "import cv2, numpy, streamlit, onnxruntime; print('All imports OK')"
+# Remove folder
+rm -rf venv  # Linux/macOS
+rmdir /s venv  # Windows
 ```
 
-### 4. Download ONNX Models (Optional)
+### Remove Python Packages
 
 ```bash
-python scripts/download_models.py
+pip uninstall -r requirements.txt -y
 ```
 
-Or manually place ONNX models in `assets/models/`
-
-### 5. Test Installation
+### Remove Project
 
 ```bash
-# Run demo
-python scripts/demo.py
-
-# Run benchmarks
-python scripts/benchmark.py
+# Delete project folder
+rm -rf video_producer  # Linux/macOS
+rmdir /s video_producer  # Windows
 ```
+
+---
+
+## Next Steps
+
+1. ✅ **Verified installation** with demo
+2. 🚀 **Start UI:** `streamlit run app/streamlit_app.py`
+3. 📖 **Read QUICKSTART.md** for 5-minute tutorial
+4. 🎬 **Process your first video** in Dashboard
+5. ⚙️ **Check Settings** for hardware optimization
+
+---
+
+**Installation complete!** 🎉
+
+For quick start guide, see [QUICKSTART.md](QUICKSTART.md)
 
 ## GPU Setup (NVIDIA)
 
