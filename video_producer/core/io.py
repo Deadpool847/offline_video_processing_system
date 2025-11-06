@@ -3,10 +3,17 @@
 import subprocess
 import json
 import numpy as np
-import av
 from pathlib import Path
 from typing import Dict, Optional, Tuple, Iterator
 import logging
+
+# PyAV is optional - fallback to FFmpeg if not available
+try:
+    import av
+    PYAV_AVAILABLE = True
+except ImportError:
+    PYAV_AVAILABLE = False
+    av = None
 
 logger = logging.getLogger(__name__)
 
