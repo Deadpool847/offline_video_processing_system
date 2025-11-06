@@ -1,0 +1,7 @@
+# Example custom preset
+codec: h264_nvenc
+crf: 20
+preset: p4
+chunk_duration: 45
+use_temporal: true
+description: "Custom balanced preset with 45s chunks"
