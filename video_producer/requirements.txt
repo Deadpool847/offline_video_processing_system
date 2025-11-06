@@ -1,25 +1,22 @@
 # Core Video Processing
-opencv-python==4.9.0.80
-numpy==1.24.3
-scikit-image==0.22.0
-Pillow==10.2.0
+opencv-python
+numpy
+scikit-image
+Pillow
 
 # ML & ONNX
-onnxruntime==1.17.0
-torch==2.2.0
-torchvision==0.17.0
+onnxruntime
 
 # UI
-streamlit==1.31.0
-plotly==5.19.0
+streamlit
+plotly
 
 # Utilities
-PyYAML==6.0.1
-tqdm==4.66.1
-psutil==5.9.8
-pynvml==11.5.0
-pandas==2.1.4
+PyYAML
+tqdm
+psutil
+pynvml
+pandas
 
 # Testing
-pytest==8.0.0
-pytest-asyncio==0.23.4
+pytest
