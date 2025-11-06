@@ -266,79 +266,247 @@ python scripts/probe.py /path/to/video.mp4
 
 **Shows:** Resolution, FPS, codec, color space, etc.
 
-## Architecture
+---
 
+## 🔧 Hardware Optimization
+
+### GPU Setup (NVIDIA - HP OMEN)
+
+**1. Check NVIDIA Driver:**
+```bash
+nvidia-smi
 ```
-video_producer/
-├── app/                    # Streamlit multi-page UI
-├── stylizers/             # 5 style processors
-├── core/                  # Pipeline, I/O, ML, metrics
-├── trainer/               # Fine-tuning system
-├── assets/                # LUTs, textures, ONNX models
-├── tests/                 # Unit tests
-└── scripts/               # CLI and utilities
+**Should show:** Driver version, GPU name, memory
+
+**If not installed:**
+- **Windows:** Download from [nvidia.com/drivers](https://www.nvidia.com/Download/index.aspx)
+- **Linux:** `sudo apt install nvidia-driver-535`
+
+**2. Verify NVENC:**
+```bash
+ffmpeg -hide_banner -encoders | grep nvenc
 ```
+**Should show:** `h264_nvenc`, `hevc_nvenc`
 
-## Hardware Notes
-
-**GPU Detection:**
-- Auto-detects NVIDIA GPU via pynvml
-- Enables NVENC if available
-- Falls back to CPU gracefully
+**3. Monitor in UI:**
+- Go to **Settings** page
+- Check GPU temp, VRAM, utilization
+- Enable/disable NVENC
 
 **Power Management (Optional):**
 ```bash
-# Limit GPU power to reduce heat
-nvidia-smi -pl 150  # 150W cap
+# Reduce heat during long jobs
+nvidia-smi -pl 150  # 150W power cap
 ```
 
-**VRAM:**
-- Monitors VRAM usage
-- Backs off if memory pressure detected
-- Configurable limits in Settings
+### CPU-Only Mode
 
-## Testing
+**If no GPU:** System automatically falls back to CPU
+- Uses `libx264` instead of NVENC
+- Slightly slower encoding (~50-100 fps vs 200+ fps)
+- All stylizers work on CPU
 
+---
+
+## 📁 Project Structure
+
+```
+video_producer/
+├── app/                    # Streamlit UI (5 pages)
+│   ├── streamlit_app.py   # Main entry
+│   └── pages/             # Dashboard, Queue, Lab, Trainer, Settings
+├── core/                  # Core processing (12 modules)
+│   ├── io.py              # Video I/O (FFmpeg/PyAV)
+│   ├── pipeline.py        # Chunked processing
+│   ├── temporal.py        # Temporal stabilization
+│   ├── hardware.py        # GPU detection
+│   └── ...                # Color, metrics, ML, presets
+├── stylizers/             # 5 style processors
+│   ├── pencil.py          # Pencil sketch
+│   ├── cartoon.py         # Cartoon
+│   ├── comic.py           # Comic/halftone
+│   ├── cinematic.py       # Cinematic grading
+│   └── fast_style.py      # Neural style (ONNX)
+├── trainer/               # ML learning system
+│   ├── finetune.py        # PyTorch training
+│   ├── dataset.py         # Training data
+│   └── export_onnx.py     # ONNX export
+├── scripts/               # Utilities
+│   ├── cli.py             # CLI interface
+│   ├── demo.py            # Quick test
+│   ├── benchmark.py       # Performance test
+│   └── probe.py           # Video inspection
+├── tests/                 # Unit tests
+├── assets/                # LUTs, models, textures, presets
+├── requirements.txt       # Python dependencies
+├── START.sh               # Quick start script
+└── [docs]                 # 6 documentation files
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Installation Issues
+
+**"opencv not found"**
 ```bash
-pytest tests/
+pip install opencv-python
 ```
 
-**Key Tests:**
-- `test_pixel_parity.py` - Identity pass validation
-- `test_chunk_stitch.py` - Chunked vs single-pass comparison
-- `test_timing_audio.py` - A/V sync verification
+**"streamlit not found"**
+```bash
+pip install streamlit
+```
 
-## Performance
+**"ModuleNotFoundError"**
+```bash
+# Reinstall all dependencies
+pip install -r requirements.txt --force-reinstall
+```
 
-**1080p @ 30fps (HP OMEN RTX 3070):**
-- Pencil/Cartoon: ~25-30 fps (CPU)
-- Comic: ~20-25 fps (CPU)
-- Cinematic: ~40-50 fps (CPU/GPU LUT)
-- Fast Neural Style: ~15-20 fps (ONNX GPU)
-- Encoding (NVENC): ~200+ fps
+### Runtime Issues
 
-## Troubleshooting
+**"NVENC not available"**
+- **Solution:** Update NVIDIA drivers to 535+
+- **Verify:** `ffmpeg -encoders | grep nvenc`
+- **Fallback:** System auto-uses `libx264` (CPU)
 
-**"NVENC not available":**
-- Update NVIDIA drivers
-- Verify with: `ffmpeg -encoders | grep nvenc`
-- Will auto-fallback to CPU (libx264)
+**"Out of memory"**
+- **Solution 1:** Reduce chunk size in Settings (30s → 60s)
+- **Solution 2:** Limit concurrent jobs to 1
+- **Solution 3:** Close other GPU applications
 
-**"Out of memory":**
-- Reduce concurrent jobs in Settings
-- Enable chunk processing
-- Lower working resolution
+**"FFmpeg not found"**
+- **Windows:** `winget install FFmpeg`
+- **Linux:** `sudo apt install ffmpeg`
+- **Mac:** `brew install ffmpeg`
 
-**"Audio sync issues":**
-- Check source video integrity
+**"Port 8501 already in use"**
+```bash
+# Use different port
+streamlit run app/streamlit_app.py --server.port 8502
+```
+
+### Video Processing Issues
+
+**"Audio sync issues"**
+- Check source video with: `python scripts/probe.py video.mp4`
 - Enable exact frame timing in Settings
+- Try different codec in Settings
 
-## License
+**"Processing too slow"**
+- Enable NVENC in Settings (if GPU available)
+- Use "Speed" preset instead of "Quality"
+- Disable temporal stabilization for faster processing
+- Process at lower resolution (Settings → working resolution)
 
-MIT License - Built for HP OMEN optimization
+**"Output looks different from input"**
+- Check color space preservation in Settings
+- Verify input video: `python scripts/probe.py input.mp4`
+- Use lossless codec (FFV1) for testing
 
-## Credits
+---
 
-- FFmpeg for robust video I/O
-- ONNX Runtime for ML inference
-- Streamlit for beautiful UI
+## 📊 Performance Benchmarks
+
+**Test System: HP OMEN (RTX 3070, i7, 16GB RAM)**
+
+| Style          | 1080p FPS | Device     | Notes                    |
+|----------------|-----------|------------|--------------------------|
+| Pencil Sketch  | 25-30     | CPU        | Single-threaded          |
+| Cartoon        | 20-25     | CPU        | K-means bottleneck       |
+| Comic          | 18-22     | CPU        | Halftone computation     |
+| Cinematic      | 40-50     | CPU/GPU    | Fast LUT + effects       |
+| Neural Style   | 15-20     | GPU        | ONNX with CUDA           |
+| Encoding       | 200+      | GPU (NVENC)| Hardware accelerated     |
+
+**Run your own benchmark:**
+```bash
+python scripts/benchmark.py
+```
+
+---
+
+## 🤝 Contributing
+
+### Adding New Styles
+
+1. Create new file in `stylizers/`
+2. Implement `process(frame, params)` method
+3. Add to `stylizers/__init__.py`
+4. Update UI in `app/pages/dashboard.py`
+
+**Example:**
+```python
+# stylizers/my_style.py
+import numpy as np
+import cv2
+
+class MyStylizer:
+    def process(self, frame: np.ndarray, params=None):
+        # Your processing logic
+        result = cv2.blur(frame, (5, 5))
+        return result
+    
+    def __call__(self, frame, metadata):
+        return self.process(frame)
+```
+
+### Adding Custom Presets
+
+Create YAML file in `assets/presets/`:
+```yaml
+# assets/presets/my_preset.yaml
+codec: h264_nvenc
+crf: 20
+preset: p4
+chunk_duration: 45
+use_temporal: true
+description: "My custom preset"
+```
+
+---
+
+## 📚 Documentation
+
+- **README.md** (this file) - Overview and setup
+- **INSTALL.md** - Detailed installation guide
+- **QUICKSTART.md** - 5-minute quick start
+- **FEATURES.md** - Complete feature specifications
+- **ARCHITECTURE.md** - System architecture deep-dive
+- **PROJECT_SUMMARY.md** - Project summary and status
+
+---
+
+## 🙏 Credits
+
+- **FFmpeg** - Robust video I/O and encoding
+- **OpenCV** - Computer vision and image processing
+- **ONNX Runtime** - ML model inference
+- **Streamlit** - Beautiful web UI
+- **PyTorch** - ML training framework
+- **scikit-image** - Image processing algorithms
+
+---
+
+## 📄 License
+
+MIT License
+
+---
+
+## 🎯 Next Steps
+
+1. **Run Demo:** `python scripts/demo.py`
+2. **Start UI:** `streamlit run app/streamlit_app.py`
+3. **Process Video:** Dashboard → Enter path → Select styles → Process
+4. **Optimize:** Settings → Enable NVENC → Adjust presets
+5. **Learn:** Style Lab → Compare outputs → Provide feedback
+6. **Train:** Trainer → Fine-tune models → Export improved ONNX
+
+---
+
+**Built with ❤️ for HP OMEN systems**
+
+*Fully offline, ML-powered video processing with intelligent optimization*
