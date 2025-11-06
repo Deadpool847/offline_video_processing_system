@@ -107,7 +107,7 @@ class ComicStylizer:
                 if dot_radius > 0:
                     center_y = (y1 + y2) // 2
                     center_x = (x1 + x2) // 2
-                    cv2.circle(result, (center_x, center_y), dot_radius, 1 - avg_intensity, -1)
+                    cv2.circle(result, (center_x, center_y), dot_radius, float(1 - avg_intensity), -1)
         
         return result
     
