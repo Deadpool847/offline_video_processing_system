@@ -3,7 +3,7 @@
 import asyncio
 import numpy as np
 from pathlib import Path
-from typing import Callable, Dict, Optional, List
+from typing import Callable, Dict, Optional, List, Tuple
 from queue import Queue
 from threading import Thread
 import logging
