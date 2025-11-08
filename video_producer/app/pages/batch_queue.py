@@ -92,56 +92,91 @@ def show():
     st.dataframe(
         df,
         use_container_width=True,
-        column_config={
-            'id': st.column_config.NumberColumn('Job ID', width='small'),
-            'input': st.column_config.TextColumn('Input', width='large'),
-            'styles': st.column_config.ListColumn('Styles', width='medium'),
-            'preset': st.column_config.TextColumn('Preset', width='small'),
-            'status': st.column_config.TextColumn('Status', width='small')
-        },
         hide_index=True
     )
     
-    # Job details (expandable)
-    st.markdown("### Job Details")
+    st.markdown("---")
     
-    for job in st.session_state.jobs:
-        with st.expander(f"Job {job['id']} - {job['status']}"):
+    # Job details (expandable)
+    st.markdown("### 📝 Job Details")
+    
+    for job in all_jobs:
+        # Status emoji
+        status_emoji = {
+            'Queued': '⏳',
+            'Processing': '🔄',
+            'Completed': '✅',
+            'Failed': '❌',
+            'Cancelled': '🚫'
+        }.get(job.status, '❓')
+        
+        with st.expander(f"{status_emoji} Job **{job.id}** - {job.status}"):
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown(f"**Input:** {job['input']}")
-                st.markdown(f"**Styles:** {', '.join(job['styles'])}")
-                st.markdown(f"**Preset:** {job['preset']}")
+                st.markdown(f"**📁 Input:** `{Path(job.input_path).name}`")
+                st.markdown(f"**🎨 Styles:** {', '.join(job.styles)}")
+                st.markdown(f"**⚙️ Preset:** {job.preset}")
+                st.markdown(f"**🎚️ Intensity:** {job.effect_intensity}x")
             
             with col2:
-                st.markdown(f"**Status:** {job['status']}")
+                st.markdown(f"**📊 Status:** {job.status}")
                 
-                # Mock progress
-                if job['status'] == 'Processing':
-                    progress = 0.65
-                    st.progress(progress, text=f"{int(progress*100)}% complete")
-                    st.markdown("**ETA:** 5 minutes")
-                    st.markdown("**FPS:** 23.5")
-                elif job['status'] == 'Completed':
-                    st.success("✅ Completed successfully")
+                if job.status == 'Processing':
+                    # Show progress
+                    st.progress(job.progress / 100.0, text=f"{job.progress:.1f}% complete")
+                    
+                    # Show stats
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.metric("FPS", f"{job.fps:.1f}")
+                    with col_b:
+                        if job.eta_seconds > 0:
+                            eta_min = int(job.eta_seconds / 60)
+                            eta_sec = int(job.eta_seconds % 60)
+                            st.metric("ETA", f"{eta_min}m {eta_sec}s")
+                        else:
+                            st.metric("ETA", "Calculating...")
+                    
+                    st.caption(f"Frame {job.current_frame} / {job.total_frames}")
                 
+                elif job.status == 'Completed':
+                    st.success("✅ Processing completed successfully!")
+                    if job.completed_at:
+                        st.caption(f"Completed: {job.completed_at}")
+                
+                elif job.status == 'Failed':
+                    st.error(f"❌ Error: {job.error}")
+                
+                elif job.status == 'Queued':
+                    st.info("⏳ Waiting in queue...")
+            
             # Action buttons
+            st.markdown("---")
             btn_col1, btn_col2, btn_col3 = st.columns(3)
             
             with btn_col1:
-                if job['status'] == 'Processing':
-                    if st.button(f"⏸️ Pause", key=f"pause_{job['id']}"):
-                        job['status'] = 'Paused'
+                if job.status in ['Queued', 'Processing']:
+                    if st.button(f"❌ Cancel", key=f"cancel_{job.id}", use_container_width=True):
+                        job_manager.cancel_job(job.id)
+                        st.success(f"✅ Job {job.id} cancelled")
+                        time.sleep(0.5)
                         st.rerun()
             
             with btn_col2:
-                if job['status'] == 'Paused':
-                    if st.button(f"▶️ Resume", key=f"resume_{job['id']}"):
-                        job['status'] = 'Processing'
-                        st.rerun()
+                if job.status == 'Completed':
+                    st.button(f"📁 Open Output", key=f"open_{job.id}", use_container_width=True,
+                             disabled=True, help="Feature coming soon")
             
             with btn_col3:
-                if st.button(f"❌ Cancel", key=f"cancel_{job['id']}"):
-                    st.session_state.jobs.remove(job)
-                    st.rerun()
+                if job.status in ['Completed', 'Failed', 'Cancelled']:
+                    if st.button(f"🗑️ Remove", key=f"remove_{job.id}", use_container_width=True):
+                        del job_manager.jobs[job.id]
+                        st.success(f"✅ Job {job.id} removed")
+                        time.sleep(0.5)
+                        st.rerun()
+    
+    # Auto-refresh
+    if auto_refresh:
+        time.sleep(5)
+        st.rerun()
