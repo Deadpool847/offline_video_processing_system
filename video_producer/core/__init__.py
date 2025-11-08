@@ -10,6 +10,9 @@ from .autotune import AutoTuner
 from .checkpoint import CheckpointManager
 from .logging_config import setup_logging, get_logger
 from .presets import PresetManager
+from .job_manager import JobManager, Job
+from .video_processor import VideoProcessor
+from .pattern_learner import PatternLearner
 
 __all__ = [
     'VideoReader',
@@ -23,5 +26,9 @@ __all__ = [
     'CheckpointManager',
     'setup_logging',
     'get_logger',
-    'PresetManager'
+    'PresetManager',
+    'JobManager',
+    'Job',
+    'VideoProcessor',
+    'PatternLearner'
 ]
