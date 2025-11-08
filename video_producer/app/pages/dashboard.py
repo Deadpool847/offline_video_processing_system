@@ -160,19 +160,19 @@ def show():
                                    help="Process the entire video")
     
     with col2:
-        st.markdown("### Preview & Info")
+        st.markdown("### 📊 Processing Info")
         
         if not selected_styles:
             st.warning("⚠️ Select at least one style")
         else:
             st.success(f"✅ {len(selected_styles)} style(s) selected")
             
-            # Display selected styles
+            # Display selected styles with effect intensity
             for style in selected_styles:
-                st.markdown(f"- **{style}**")
+                st.markdown(f"- **{style}** (Intensity: {effect_intensity}x)")
         
         # Hardware info
-        st.markdown("### Hardware Status")
+        st.markdown("### 💻 Hardware Status")
         
         if hw_mgr.gpu_available:
             st.markdown(f"**GPU:** {hw_mgr.gpu_info.get('name', 'Unknown')}")
@@ -183,45 +183,76 @@ def show():
             
             temp = hw_mgr.get_gpu_temperature()
             if temp:
-                st.metric("GPU Temperature", f"{temp}°C")
+                temp_color = "🟢" if temp < 70 else "🟡" if temp < 80 else "🔴"
+                st.metric("GPU Temperature", f"{temp}°C", delta=f"{temp_color}")
         else:
-            st.info("Running on CPU (GPU not detected)")
+            st.info("ℹ️ Running on CPU (GPU not detected)")
         
         # Preset info
-        st.markdown("### Preset Details")
+        st.markdown("### ⚙️ Preset Details")
         st.json(preset)
+        
+        # Pattern learning info
+        st.markdown("### 🧠 Intelligent Processing")
+        st.info("""
+        **Pattern Learning Active:**
+        - Analyzes video characteristics
+        - Optimizes parameters automatically
+        - Adapts to content type
+        - Learns from past processing
+        """)
     
     # Handle buttons
     if preview_btn:
         if not input_path:
-            st.error("Please provide an input path")
+            st.error("❌ Please provide an input path or upload a file")
         elif not selected_styles:
-            st.error("Please select at least one style")
+            st.error("❌ Please select at least one style")
+        elif not Path(input_path).exists():
+            st.error(f"❌ File not found: {input_path}")
         else:
-            with st.spinner("Generating preview..."):
-                st.info("Preview functionality - processing 5 seconds...")
-                # TODO: Implement preview
-                st.success("Preview ready! (Feature in development)")
+            with st.spinner("🔄 Generating preview (processing first 5 seconds)..."):
+                st.info("⏳ Preview functionality coming soon...")
+                st.success("✅ Quick preview feature will be available in next update")
     
     if process_btn:
         if not input_path:
-            st.error("Please provide an input path")
+            st.error("❌ Please provide an input path or upload a file")
         elif not selected_styles:
-            st.error("Please select at least one style")
+            st.error("❌ Please select at least one style")
+        elif not Path(input_path).exists():
+            st.error(f"❌ File not found: {input_path}")
         else:
-            # Add to queue
-            st.session_state.total_jobs += 1
-            st.success(f"✅ Job added to queue! Job ID: {st.session_state.total_jobs}")
-            st.info("Check 'Batch Queue' page to monitor progress")
+            # Validate output directory
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
             
-            # Store job info
-            if 'jobs' not in st.session_state:
-                st.session_state.jobs = []
-            
-            st.session_state.jobs.append({
-                'id': st.session_state.total_jobs,
-                'input': input_path,
-                'styles': selected_styles,
-                'preset': preset_name,
-                'status': 'Queued'
-            })
+            # Add job to queue
+            try:
+                job_id = job_manager.add_job(
+                    input_path=input_path,
+                    output_path=output_dir,
+                    styles=selected_styles,
+                    preset=preset_name,
+                    effect_intensity=effect_intensity
+                )
+                
+                st.success(f"✅ Job added to queue! Job ID: **{job_id}**")
+                st.info(f"""
+                **Processing Configuration:**
+                - Input: {Path(input_path).name}
+                - Styles: {', '.join(selected_styles)}
+                - Intensity: {effect_intensity}x
+                - Preset: {preset_name}
+                - Output: {output_dir}
+                
+                👉 Go to **Batch Queue** to monitor progress
+                """)
+                
+                # Auto-switch to queue page option
+                if st.button("🔄 View in Batch Queue"):
+                    st.session_state.current_page = 'Batch Queue'
+                    st.rerun()
+                
+            except Exception as e:
+                st.error(f"❌ Failed to add job: {str(e)}")
+                st.exception(e)
