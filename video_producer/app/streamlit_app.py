@@ -15,6 +15,17 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Initialize session state FIRST
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = 'Dashboard'
+if 'job_manager' not in st.session_state:
+    from core.job_manager import JobManager
+    st.session_state.job_manager = JobManager()
+if 'total_jobs' not in st.session_state:
+    st.session_state.total_jobs = 0
+if 'completed_jobs' not in st.session_state:
+    st.session_state.completed_jobs = 0
+
 # Custom CSS
 st.markdown("""
 <style>
@@ -44,34 +55,39 @@ st.markdown("""
         color: #ef4444;
         font-weight: 600;
     }
+    .stProgress > div > div > div > div {
+        background-color: #667eea;
+    }
 </style>
 """, unsafe_allow_html=True)
-
-# Import pages
-from pages import dashboard, batch_queue, style_lab, trainer_page, settings_page
 
 # Sidebar navigation
 with st.sidebar:
     st.markdown("<div class='main-header'>🎬 Video Producer</div>", unsafe_allow_html=True)
     st.markdown("### Navigation")
     
+    # Page selection
     page = st.radio(
         "Select Page",
         ["Dashboard", "Batch Queue", "Style Lab", "Trainer", "Settings"],
-        label_visibility="collapsed"
+        key="page_selector",
+        index=["Dashboard", "Batch Queue", "Style Lab", "Trainer", "Settings"].index(st.session_state.current_page)
     )
+    
+    # Update current page
+    st.session_state.current_page = page
     
     st.markdown("---")
     st.markdown("### Quick Stats")
     
-    # Initialize session state
-    if 'total_jobs' not in st.session_state:
-        st.session_state.total_jobs = 0
-    if 'completed_jobs' not in st.session_state:
-        st.session_state.completed_jobs = 0
+    # Get real stats from job manager
+    job_manager = st.session_state.job_manager
+    all_jobs = job_manager.get_all_jobs()
+    completed = len([j for j in all_jobs if j.status == 'Completed'])
     
-    st.metric("Total Jobs", st.session_state.total_jobs)
-    st.metric("Completed", st.session_state.completed_jobs)
+    st.metric("Total Jobs", len(all_jobs))
+    st.metric("Completed", completed)
+    st.metric("Active", len([j for j in all_jobs if j.status == 'Processing']))
     
     st.markdown("---")
     st.markdown("""
@@ -81,16 +97,28 @@ with st.sidebar:
     ✅ GPU-Accelerated ML
     ✅ Temporal Stability
     ✅ Resume on Crash
+    ✅ Pattern Learning
     """)
 
-# Route to selected page
-if page == "Dashboard":
-    dashboard.show()
-elif page == "Batch Queue":
-    batch_queue.show()
-elif page == "Style Lab":
-    style_lab.show()
-elif page == "Trainer":
-    trainer_page.show()
-elif page == "Settings":
-    settings_page.show()
+# Dynamic import based on current page
+import importlib
+
+try:
+    if page == "Dashboard":
+        from pages import dashboard
+        dashboard.show()
+    elif page == "Batch Queue":
+        from pages import batch_queue
+        batch_queue.show()
+    elif page == "Style Lab":
+        from pages import style_lab
+        style_lab.show()
+    elif page == "Trainer":
+        from pages import trainer_page
+        trainer_page.show()
+    elif page == "Settings":
+        from pages import settings_page
+        settings_page.show()
+except Exception as e:
+    st.error(f"Error loading page: {e}")
+    st.exception(e)
