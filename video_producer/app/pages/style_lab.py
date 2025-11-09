@@ -111,20 +111,98 @@ def show():
     
     st.markdown("---")
     
-    # A/B Comparison
-    st.markdown("### A/B Comparison")
+    # Display comparison results
+    if 'comparison_results' in st.session_state and st.session_state['comparison_results']:
+        st.markdown("### 🎬 Style Comparison Results")
+        
+        results = st.session_state['comparison_results']
+        
+        # Create columns based on number of results
+        num_cols = min(len(results), 3)  # Max 3 columns per row
+        
+        for i in range(0, len(results), num_cols):
+            cols = st.columns(num_cols)
+            
+            for j, col in enumerate(cols):
+                if i + j < len(results):
+                    style, result = results[i + j]
+                    
+                    with col:
+                        st.markdown(f"#### {style}")
+                        st.video(result['output_path'])
+                        
+                        # Stats
+                        st.caption(f"⚡ {result['avg_fps']:.1f} FPS | ⏱️ {result['processing_time']:.2f}s")
+                        
+                        # Rating
+                        rating = st.slider(
+                            f"Rate {style}",
+                            1, 5, 3,
+                            key=f"rating_{i+j}_{style}",
+                            help="1=Poor, 3=Good, 5=Excellent"
+                        )
+                        
+                        # Download
+                        with open(result['output_path'], 'rb') as f:
+                            video_bytes = f.read()
+                            st.download_button(
+                                label="📥 Download",
+                                data=video_bytes,
+                                file_name=f"{style.lower().replace(' ', '_')}_sample.mp4",
+                                mime="video/mp4",
+                                key=f"download_{i+j}_{style}",
+                                use_container_width=True
+                            )
+        
+        st.markdown("---")
+        
+        # Original video for reference
+        if 'original_video' in st.session_state:
+            with st.expander("📹 View Original Video"):
+                st.video(st.session_state['original_video'])
     
-    col_a, col_b = st.columns(2)
+    st.markdown("---")
     
-    with col_a:
-        st.markdown("#### Style A: Pencil Sketch")
-        st.image("https://via.placeholder.com/400x300.png?text=Style+A", use_container_width=True)
-        rating_a = st.slider("Rate Style A", 1, 5, 3, key="rating_a")
+    # A/B Direct Comparison
+    st.markdown("### 🔀 A/B Direct Comparison")
     
-    with col_b:
-        st.markdown("#### Style B: Cartoon")
-        st.image("https://via.placeholder.com/400x300.png?text=Style+B", use_container_width=True)
-        rating_b = st.slider("Rate Style B", 1, 5, 4, key="rating_b")
+    if 'comparison_results' in st.session_state and len(st.session_state['comparison_results']) >= 2:
+        results = st.session_state['comparison_results']
+        
+        col_select1, col_select2 = st.columns(2)
+        
+        with col_select1:
+            style_a_idx = st.selectbox(
+                "Style A",
+                range(len(results)),
+                format_func=lambda x: results[x][0],
+                key="style_a_select"
+            )
+        
+        with col_select2:
+            style_b_idx = st.selectbox(
+                "Style B",
+                range(len(results)),
+                format_func=lambda x: results[x][0],
+                index=min(1, len(results)-1),
+                key="style_b_select"
+            )
+        
+        col_a, col_b = st.columns(2)
+        
+        with col_a:
+            style_a, result_a = results[style_a_idx]
+            st.markdown(f"#### Style A: {style_a}")
+            st.video(result_a['output_path'])
+            rating_a = st.slider("Rate Style A", 1, 5, 3, key="rating_a")
+        
+        with col_b:
+            style_b, result_b = results[style_b_idx]
+            st.markdown(f"#### Style B: {style_b}")
+            st.video(result_b['output_path'])
+            rating_b = st.slider("Rate Style B", 1, 5, 4, key="rating_b")
+    else:
+        st.info("💡 Generate comparison above to use A/B comparison feature")
     
     # Comparison notes
     st.markdown("### Notes")
