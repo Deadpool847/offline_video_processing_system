@@ -153,6 +153,106 @@ def show():
             
             # Action buttons
             st.markdown("---")
+            
+            if job.status == 'Completed':
+                # Show output files
+                st.markdown("**📁 Output Files:**")
+                
+                # Find output files
+                output_dir = Path(job.output_path)
+                input_name = Path(job.input_path).stem
+                
+                output_files = []
+                for style in job.styles:
+                    style_slug = style.lower().replace(' ', '_')
+                    expected_file = output_dir / f"{input_name}_{style_slug}.mp4"
+                    if expected_file.exists():
+                        output_files.append((style, str(expected_file)))
+                
+                if output_files:
+                    for style, file_path in output_files:
+                        col_file1, col_file2, col_file3 = st.columns([2, 1, 1])
+                        
+                        with col_file1:
+                            file_size = Path(file_path).stat().st_size / (1024 * 1024)
+                            st.markdown(f"**{style}** ({file_size:.1f} MB)")
+                        
+                        with col_file2:
+                            # Video player
+                            if st.button(f"▶️ Play", key=f"play_{job.id}_{style}", use_container_width=True):
+                                st.session_state[f'playing_{job.id}_{style}'] = True
+                        
+                        with col_file3:
+                            # Download button
+                            try:
+                                with open(file_path, 'rb') as f:
+                                    video_bytes = f.read()
+                                    st.download_button(
+                                        label="📥 Download",
+                                        data=video_bytes,
+                                        file_name=Path(file_path).name,
+                                        mime="video/mp4",
+                                        key=f"download_{job.id}_{style}",
+                                        use_container_width=True
+                                    )
+                            except Exception as e:
+                                st.button(f"⚠️ Error", key=f"error_{job.id}_{style}", 
+                                         disabled=True, use_container_width=True)
+                        
+                        # Show video if play button clicked
+                        if st.session_state.get(f'playing_{job.id}_{style}', False):
+                            st.video(file_path)
+                            if st.button(f"⏹️ Close", key=f"close_{job.id}_{style}"):
+                                st.session_state[f'playing_{job.id}_{style}'] = False
+                                st.rerun()
+                    
+                    # Bulk actions for completed jobs
+                    st.markdown("---")
+                    bulk_col1, bulk_col2 = st.columns(2)
+                    
+                    with bulk_col1:
+                        if st.button(f"📂 Open Folder", key=f"folder_{job.id}", use_container_width=True):
+                            import subprocess
+                            import platform
+                            
+                            try:
+                                if platform.system() == 'Windows':
+                                    subprocess.run(['explorer', str(output_dir)])
+                                elif platform.system() == 'Darwin':
+                                    subprocess.run(['open', str(output_dir)])
+                                else:
+                                    subprocess.run(['xdg-open', str(output_dir)])
+                                st.success(f"✅ Opened folder: {output_dir}")
+                            except Exception as e:
+                                st.error(f"❌ Could not open folder: {e}")
+                    
+                    with bulk_col2:
+                        if st.button(f"📦 Package All", key=f"package_{job.id}", use_container_width=True):
+                            try:
+                                from core.video_exporter import VideoExporter
+                                
+                                zip_path = output_dir / f"{input_name}_all_styles.zip"
+                                file_paths = [fp for _, fp in output_files]
+                                
+                                if VideoExporter.package_outputs(file_paths, str(zip_path)):
+                                    with open(zip_path, 'rb') as f:
+                                        zip_bytes = f.read()
+                                        st.download_button(
+                                            label="📥 Download Package",
+                                            data=zip_bytes,
+                                            file_name=zip_path.name,
+                                            mime="application/zip",
+                                            key=f"download_zip_{job.id}"
+                                        )
+                                else:
+                                    st.error("❌ Failed to create package")
+                            except Exception as e:
+                                st.error(f"❌ Packaging failed: {e}")
+                else:
+                    st.warning("⚠️ No output files found")
+            
+            # Control buttons
+            st.markdown("---")
             btn_col1, btn_col2, btn_col3 = st.columns(3)
             
             with btn_col1:
@@ -165,8 +265,17 @@ def show():
             
             with btn_col2:
                 if job.status == 'Completed':
-                    st.button(f"📁 Open Output", key=f"open_{job.id}", use_container_width=True,
-                             disabled=True, help="Feature coming soon")
+                    if st.button(f"🔄 Process Again", key=f"reprocess_{job.id}", use_container_width=True):
+                        new_job_id = job_manager.add_job(
+                            input_path=job.input_path,
+                            output_path=job.output_path,
+                            styles=job.styles,
+                            preset=job.preset,
+                            effect_intensity=job.effect_intensity
+                        )
+                        st.success(f"✅ New job created: {new_job_id}")
+                        time.sleep(0.5)
+                        st.rerun()
             
             with btn_col3:
                 if job.status in ['Completed', 'Failed', 'Cancelled']:
