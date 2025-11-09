@@ -211,9 +211,70 @@ def show():
         elif not Path(input_path).exists():
             st.error(f"❌ File not found: {input_path}")
         else:
-            with st.spinner("🔄 Generating preview (processing first 5 seconds)..."):
-                st.info("⏳ Preview functionality coming soon...")
-                st.success("✅ Quick preview feature will be available in next update")
+            # Generate preview for first selected style
+            preview_style = selected_styles[0]
+            
+            with st.spinner(f"🔄 Generating {preview_style} preview (5 seconds)..."):
+                try:
+                    from core.preview_generator import PreviewGenerator
+                    from stylizers import (PencilStylizer, CartoonStylizer, ComicStylizer,
+                                          CinematicStylizer, FastStyleStylizer)
+                    
+                    # Get stylizer
+                    if 'Pencil' in preview_style:
+                        stylizer = PencilStylizer()
+                    elif 'Cartoon' in preview_style:
+                        stylizer = CartoonStylizer()
+                    elif 'Comic' in preview_style:
+                        stylizer = ComicStylizer()
+                    elif 'Cinematic' in preview_style:
+                        stylizer = CinematicStylizer()
+                    else:
+                        stylizer = PencilStylizer()
+                    
+                    # Generate preview
+                    generator = PreviewGenerator()
+                    result = generator.generate_preview(
+                        input_path=input_path,
+                        stylizer=stylizer,
+                        duration_seconds=5.0,
+                        start_time=0.0,
+                        effect_intensity=effect_intensity
+                    )
+                    
+                    if result['success']:
+                        st.success(f"✅ Preview generated in {result['processing_time']:.2f}s!")
+                        
+                        # Show stats
+                        col_p1, col_p2, col_p3 = st.columns(3)
+                        with col_p1:
+                            st.metric("Frames", result['frames_processed'])
+                        with col_p2:
+                            st.metric("Avg FPS", f"{result['avg_fps']:.1f}")
+                        with col_p3:
+                            st.metric("Duration", f"{result['duration']:.1f}s")
+                        
+                        # Display video
+                        st.markdown("### 🎬 Preview Result")
+                        st.video(result['output_path'])
+                        
+                        # Download button
+                        with open(result['output_path'], 'rb') as f:
+                            video_bytes = f.read()
+                            st.download_button(
+                                label="📥 Download Preview",
+                                data=video_bytes,
+                                file_name=f"preview_{preview_style.lower().replace(' ', '_')}.mp4",
+                                mime="video/mp4"
+                            )
+                        
+                        st.info(f"💡 Processing full video with these settings will take approximately {result['processing_time'] * (metadata.get('duration', 60) / 5.0):.1f}s")
+                    else:
+                        st.error(f"❌ Preview failed: {result.get('error', 'Unknown error')}")
+                        
+                except Exception as e:
+                    st.error(f"❌ Preview generation failed: {str(e)}")
+                    st.exception(e)
     
     if process_btn:
         if not input_path:
