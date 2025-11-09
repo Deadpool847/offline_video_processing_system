@@ -13,6 +13,8 @@ from .presets import PresetManager
 from .job_manager import JobManager, Job
 from .video_processor import VideoProcessor
 from .pattern_learner import PatternLearner
+from .preview_generator import PreviewGenerator
+from .video_exporter import VideoExporter
 
 __all__ = [
     'VideoReader',
@@ -30,5 +32,7 @@ __all__ = [
     'JobManager',
     'Job',
     'VideoProcessor',
-    'PatternLearner'
+    'PatternLearner',
+    'PreviewGenerator',
+    'VideoExporter'
 ]
